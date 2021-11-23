@@ -27,36 +27,42 @@ def subscription(request):
     """
     """
     if request.method == "POST":
-        user = User.objects.get(username=request.user)
-        customer = stripe.Customer.create(
-            description=user.username,
-            email=user.email,
-            name=user.username,
-            address={
-                "line1": "510 Townsend St",
-                "postal_code": "98140",
-                "city": "San Francisco",
-                "state": "CA",
-                "country": "US",
-            },
-            source=request.POST["stripeToken"],
-        )
+        if Profile.objects.filter(user=request.user).customer_id is None:
+
+            
+            customer = stripe.Customer.create(
+                description=user.username,
+                email=user.email,
+                name=user.username,
+                address={
+                    "line1": "510 Townsend St",
+                    "postal_code": "98140",
+                    "city": "San Francisco",
+                    "state": "CA",
+                    "country": "US",
+                },
+                source=request.POST["stripeToken"],
+            )
+            cid = customer.id
+        else:
+            cid = Profile.objects.filter(user=request.user).customer_id
+
         subs = stripe.Subscription.create(
-            customer=customer.id,
+            customer=cid,
             items=[
                 {"price": PRICE_ID},
             ],
         )
         charge = stripe.Charge.create(
-            amount="50",
+            amount="4999",
             currency="usd",
             description="Payment Gateway",
-            customer=customer.id,
+            customer=cid,
         )
         Profile.objects.filter(user=request.user).update(
             sub_id=subs.id,
             charge_id=charge.id,
-            customer_id=customer.id,
+            customer_id=cid,
             user=request.user,
             is_pro=True,
         )
